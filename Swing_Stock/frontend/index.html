@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Stock Analytics AI</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<nav>
+
+    <div class="logo">
+        Stock Analytics AI
+    </div>
+
+    <div class="nav-links">
+        <a href="#dashboard">Dashboard</a>
+        <a href="#paper">Paper Trading</a>
+    </div>
+
+</nav>
+
+
+<main>
+
+
+<!-- =====================================================
+     DASHBOARD
+===================================================== -->
+
+<section id="dashboard">
+
+    <div class="page-header">
+
+        <div>
+            <h1>Indian Swing Market</h1>
+
+            <p>
+                AI-powered analysis of the Top 50 swing universe
+            </p>
+        </div>
+
+        <button
+            class="primary"
+            onclick="loadTop5()">
+
+            🔄 Analyze Top 5
+
+        </button>
+
+    </div>
+
+
+    <!-- MARKET SUMMARY -->
+
+    <div class="summary-grid">
+
+        <div class="summary-card">
+
+            <span>BUY Opportunities</span>
+
+            <strong id="buyCount">
+                -
+            </strong>
+
+        </div>
+
+
+        <div class="summary-card">
+
+            <span>SELL Opportunities</span>
+
+            <strong id="sellCount">
+                -
+            </strong>
+
+        </div>
+
+
+        <div class="summary-card">
+
+            <span>Market Scan</span>
+
+            <strong>
+                Top 50
+            </strong>
+
+        </div>
+
+
+        <div class="summary-card">
+
+            <span>Last Scan</span>
+
+            <strong id="lastScan">
+                -
+            </strong>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- TOP 5 -->
+
+    <div class="section-title">
+
+        <h2>
+            🏆 Top 5 Opportunities
+        </h2>
+
+        <span>
+            BUY + SELL
+        </span>
+
+    </div>
+
+
+    <div
+        id="top5"
+        class="stock-grid">
+
+        <div class="loading">
+            Loading analysis...
+        </div>
+
+    </div>
+
+
+
+    <!-- ANALYZE STOCK -->
+
+    <div class="card">
+
+        <h2>
+            🔍 Analyze Specific Stock
+        </h2>
+
+        <div class="search-box">
+
+            <input
+                id="symbol"
+                value="TCS"
+                placeholder="Enter NSE stock">
+
+            <button
+                class="primary"
+                onclick="analyzeStock()">
+
+                Analyze
+
+            </button>
+
+        </div>
+
+
+        <div
+            id="analysis"
+            class="analysis-box">
+
+            Enter a stock and click Analyze.
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     PAPER TRADING
+===================================================== -->
+
+<section id="paper">
+
+    <div class="page-header">
+
+        <div>
+
+            <h1>
+                📊 Paper Trading
+            </h1>
+
+            <p>
+                Practice trades without using real money.
+            </p>
+
+        </div>
+
+        <button
+            class="primary"
+            onclick="refreshPortfolio()">
+
+            🔄 Refresh
+
+        </button>
+
+    </div>
+
+
+
+    <!-- ACCOUNT -->
+
+    <div class="summary-grid">
+
+        <div class="summary-card">
+
+            <span>
+                Available Cash
+            </span>
+
+            <strong id="cash">
+                ₹100,000
+            </strong>
+
+        </div>
+
+
+        <div class="summary-card">
+
+            <span>
+                Open Positions
+            </span>
+
+            <strong id="positionCount">
+                0
+            </strong>
+
+        </div>
+
+
+        <div class="summary-card">
+
+            <span>
+                Total Trades
+            </span>
+
+            <strong id="tradeCount">
+                0
+            </strong>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- TRADE FORM -->
+
+    <div class="card">
+
+        <h2>
+            Execute Paper Trade
+        </h2>
+
+
+        <div class="trade-form">
+
+            <input
+                id="tradeSymbol"
+                placeholder="Symbol"
+                value="TCS">
+
+
+            <input
+                id="tradePrice"
+                type="number"
+                placeholder="Price">
+
+
+            <input
+                id="tradeQty"
+                type="number"
+                placeholder="Quantity">
+
+
+            <button
+                class="buy-button"
+                onclick="executeTrade('buy')">
+
+                BUY
+
+            </button>
+
+
+            <button
+                class="sell-button"
+                onclick="executeTrade('sell')">
+
+                SELL
+
+            </button>
+
+        </div>
+
+
+        <div
+            id="tradeResult"
+            class="message">
+
+        </div>
+
+    </div>
+
+
+
+    <!-- POSITIONS -->
+
+    <div class="card">
+
+        <h2>
+            Open Positions
+        </h2>
+
+
+        <div
+            id="positions">
+
+            No open positions.
+
+        </div>
+
+    </div>
+
+
+
+    <!-- TRADE HISTORY -->
+
+    <div class="card">
+
+        <h2>
+            Trade History
+        </h2>
+
+
+        <div
+            id="tradeHistory">
+
+            No trades yet.
+
+        </div>
+
+    </div>
+
+</section>
+
+</main>
+
+
+<script src="app.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,620 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+
+    margin: 0;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    background: #f4f6f8;
+
+    color: #17202a;
+}
+
+
+/* =====================================================
+   NAVIGATION
+===================================================== */
+
+nav {
+
+    height: 65px;
+
+    background: #111827;
+
+    color: white;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 0 30px;
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 100;
+}
+
+
+.logo {
+
+    font-size: 20px;
+
+    font-weight: bold;
+}
+
+
+.nav-links {
+
+    display: flex;
+
+    gap: 25px;
+}
+
+
+.nav-links a {
+
+    color: white;
+
+    text-decoration: none;
+
+    font-size: 14px;
+}
+
+
+.nav-links a:hover {
+
+    opacity: 0.7;
+}
+
+
+
+/* =====================================================
+   MAIN
+===================================================== */
+
+main {
+
+    max-width: 1200px;
+
+    margin: auto;
+
+    padding: 30px 20px;
+}
+
+
+section {
+
+    margin-bottom: 70px;
+}
+
+
+.page-header {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 25px;
+}
+
+
+.page-header h1 {
+
+    margin-bottom: 5px;
+}
+
+
+.page-header p {
+
+    margin-top: 0;
+
+    color: #6b7280;
+}
+
+
+
+/* =====================================================
+   BUTTONS
+===================================================== */
+
+button {
+
+    border: none;
+
+    border-radius: 7px;
+
+    padding: 11px 18px;
+
+    cursor: pointer;
+
+    font-weight: bold;
+}
+
+
+.primary {
+
+    background: #2563eb;
+
+    color: white;
+}
+
+
+.buy-button {
+
+    background: #16a34a;
+
+    color: white;
+}
+
+
+.sell-button {
+
+    background: #dc2626;
+
+    color: white;
+}
+
+
+button:hover {
+
+    opacity: 0.85;
+}
+
+
+
+/* =====================================================
+   SUMMARY
+===================================================== */
+
+.summary-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 15px;
+
+    margin-bottom: 30px;
+}
+
+
+.summary-card {
+
+    background: white;
+
+    padding: 20px;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 2px 8px #00000012;
+}
+
+
+.summary-card span {
+
+    display: block;
+
+    color: #6b7280;
+
+    font-size: 13px;
+}
+
+
+.summary-card strong {
+
+    display: block;
+
+    margin-top: 10px;
+
+    font-size: 27px;
+}
+
+
+
+/* =====================================================
+   SECTION TITLE
+===================================================== */
+
+.section-title {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 15px;
+}
+
+
+
+/* =====================================================
+   STOCK GRID
+===================================================== */
+
+.stock-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(5, 1fr);
+
+    gap: 15px;
+
+    margin-bottom: 30px;
+}
+
+
+.stock-card {
+
+    background: white;
+
+    padding: 18px;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 2px 8px #00000012;
+
+    transition:
+        transform 0.15s;
+}
+
+
+.stock-card:hover {
+
+    transform:
+        translateY(-3px);
+}
+
+
+.stock-rank {
+
+    color: #6b7280;
+
+    font-size: 12px;
+}
+
+
+.stock-symbol {
+
+    font-size: 20px;
+
+    font-weight: bold;
+
+    margin-top: 5px;
+}
+
+
+.stock-price {
+
+    margin-top: 10px;
+
+    font-size: 17px;
+}
+
+
+.score {
+
+    margin-top: 15px;
+
+    font-size: 28px;
+
+    font-weight: bold;
+}
+
+
+.score-label {
+
+    font-size: 12px;
+
+    color: #6b7280;
+}
+
+
+.direction {
+
+    display: inline-block;
+
+    padding: 6px 10px;
+
+    border-radius: 20px;
+
+    margin-top: 12px;
+
+    font-size: 12px;
+
+    font-weight: bold;
+}
+
+
+.direction-buy {
+
+    background: #dcfce7;
+
+    color: #166534;
+}
+
+
+.direction-sell {
+
+    background: #fee2e2;
+
+    color: #991b1b;
+}
+
+
+.direction-watch {
+
+    background: #fef3c7;
+
+    color: #92400e;
+}
+
+
+.direction-hold {
+
+    background: #e5e7eb;
+
+    color: #374151;
+}
+
+
+.score-row {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    margin-top: 15px;
+
+    font-size: 12px;
+}
+
+
+
+/* =====================================================
+   CARD
+===================================================== */
+
+.card {
+
+    background: white;
+
+    padding: 25px;
+
+    border-radius: 12px;
+
+    margin-top: 20px;
+
+    box-shadow:
+        0 2px 8px #00000012;
+}
+
+
+
+/* =====================================================
+   SEARCH
+===================================================== */
+
+.search-box {
+
+    display: flex;
+
+    gap: 10px;
+}
+
+
+input {
+
+    padding: 12px;
+
+    border:
+        1px solid #d1d5db;
+
+    border-radius: 7px;
+
+    outline: none;
+}
+
+
+.search-box input {
+
+    flex: 1;
+}
+
+
+
+/* =====================================================
+   ANALYSIS
+===================================================== */
+
+.analysis-box {
+
+    margin-top: 20px;
+
+    background: #f8fafc;
+
+    border-radius: 8px;
+
+    padding: 20px;
+
+    min-height: 100px;
+}
+
+
+.analysis-header {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+}
+
+
+.analysis-score {
+
+    font-size: 30px;
+
+    font-weight: bold;
+}
+
+
+.analysis-section {
+
+    margin-top: 20px;
+}
+
+
+.analysis-section h3 {
+
+    margin-bottom: 8px;
+}
+
+
+
+/* =====================================================
+   PAPER TRADING
+===================================================== */
+
+.trade-form {
+
+    display: flex;
+
+    gap: 10px;
+
+    flex-wrap: wrap;
+
+    margin-top: 20px;
+}
+
+
+.trade-form input {
+
+    width: 150px;
+}
+
+
+.message {
+
+    margin-top: 15px;
+
+    padding: 10px;
+
+    border-radius: 7px;
+}
+
+
+.position {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    padding: 15px;
+
+    border-bottom:
+        1px solid #e5e7eb;
+}
+
+
+.trade-row {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(6, 1fr);
+
+    padding: 12px;
+
+    border-bottom:
+        1px solid #e5e7eb;
+
+    font-size: 13px;
+}
+
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media(max-width:900px) {
+
+    .stock-grid {
+
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+    .summary-grid {
+
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+}
+
+
+@media(max-width:600px) {
+
+    nav {
+
+        padding: 0 15px;
+    }
+
+    .nav-links {
+
+        gap: 10px;
+    }
+
+    .page-header {
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 15px;
+    }
+
+    .stock-grid {
+
+        grid-template-columns: 1fr;
+    }
+
+    .summary-grid {
+
+        grid-template-columns: 1fr;
+    }
+
+    .search-box {
+
+        flex-direction: column;
+    }
+
+    .trade-form {
+
+        flex-direction: column;
+    }
+
+    .trade-form input {
+
+        width: 100%;
+    }
+}

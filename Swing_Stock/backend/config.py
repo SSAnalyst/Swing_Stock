@@ -1,0 +1,6 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
+OPENROUTER_API_KEY=os.getenv("OPENROUTER_API_KEY","")
+OPENROUTER_MODEL=os.getenv("OPENROUTER_MODEL","openai/gpt-4o-mini")
+NASDAQ_API_KEY=os.getenv("NASDAQ_API_KEY","")
