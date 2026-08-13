@@ -53,9 +53,10 @@ def analyze(symbol: str):
 
 
 @app.get("/top5")
-def top5():
+def top5(skip_ai: bool = False):
+    results = orch.top5(skip_ai=skip_ai)
     return {
-        "results": orch.top5()
+        "results": results
     }
 
 

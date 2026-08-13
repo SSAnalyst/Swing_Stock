@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0a0e27;
+            color: #e8eef5;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .container {
+            background: #151932;
+            border: 1px solid #2a2f4f;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success { background: rgba(6, 255, 165, 0.2); color: #06ffa5; }
+        .error { background: rgba(255, 0, 110, 0.2); color: #ff006e; }
+        .info { background: rgba(0, 217, 255, 0.2); color: #00d9ff; }
+        button {
+            background: #00d9ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+        button:hover { opacity: 0.8; }
+        h1 { color: #00d9ff; }
+        pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 6px;
+            overflow: auto;
+            max-height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Stock Nexus AI - Connection Diagnostic</h1>
+    
+    <div class="container">
+        <h2>System Information</h2>
+        <div id="sysinfo"></div>
+    </div>
+
+    <div class="container">
+        <h2>Backend Connection Tests</h2>
+        <button onclick="testAPI('/top5', 'Test Top 5 Endpoint')">Test /top5</button>
+        <button onclick="testAPI('/paper', 'Test Paper Trading')">Test /paper</button>
+        <button onclick="testAPI('/analytics', 'Test Analytics')">Test /analytics</button>
+        <div id="tests"></div>
+    </div>
+
+    <div class="container">
+        <h2>Test Response</h2>
+        <pre id="response">No test run yet...</pre>
+    </div>
+
+    <script>
+        const API = "http://127.0.0.1:8000";
+
+        // Display system info
+        document.getElementById('sysinfo').innerHTML = `
+            <div class="info">
+                <strong>Frontend URL:</strong> ${window.location.href}<br>
+                <strong>Backend URL:</strong> ${API}<br>
+                <strong>Hostname:</strong> ${window.location.hostname}<br>
+            </div>
+        `;
+
+        async function testAPI(endpoint, label) {
+            const responseDiv = document.getElementById('response');
+            const testsDiv = document.getElementById('tests');
+            
+            responseDiv.innerHTML = `Testing ${endpoint}...`;
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch(`${API}${endpoint}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const endTime = Date.now();
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    responseDiv.innerHTML = `
+<strong>✓ ${label} - SUCCESS</strong>
+Status: ${response.status}
+Time: ${endTime - startTime}ms
+
+Response:
+${JSON.stringify(data, null, 2)}
+                    `;
+                    
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = `✓ ${label}: SUCCESS (${response.status})`;
+                    testsDiv.appendChild(statusDiv);
+                } else {
+                    responseDiv.innerHTML = `
+<strong>✗ ${label} - FAILED</strong>
+Status: ${response.status}
+Time: ${endTime - startTime}ms
+
+Response:
+${JSON.stringify(data, null, 2)}
+                    `;
+                    
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = `✗ ${label}: FAILED (${response.status})`;
+                    testsDiv.appendChild(statusDiv);
+                }
+            } catch (error) {
+                responseDiv.innerHTML = `
+<strong>✗ ${label} - ERROR</strong>
+
+${error.message}
+
+Troubleshooting:
+1. Is the backend running on port 8000?
+   → python -m uvicorn backend.app:app --reload
+
+2. Is the backend accessible from this URL?
+   → ${API}
+
+3. Try accessing backend directly:
+   → curl ${API}/top5
+                `;
+                
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `✗ ${label}: ERROR - ${error.message}`;
+                testsDiv.appendChild(statusDiv);
+            }
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            console.log('Diagnostic page loaded');
+            console.log('API URL:', API);
+        });
+    </script>
+</body>
+</html>

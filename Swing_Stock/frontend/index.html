@@ -4,352 +4,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Stock Analytics AI</title>
-
+    <title>Stock Nexus AI - Advanced Trading Analytics</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
 
-<nav>
-
-    <div class="logo">
-        Stock Analytics AI
+<!-- SIDEBAR NAVIGATION -->
+<nav class="sidebar">
+    <div class="sidebar-header">
+        <div class="logo">
+            <i class="fas fa-chart-line"></i>
+            <span>NEXUS AI</span>
+        </div>
     </div>
 
-    <div class="nav-links">
-        <a href="#dashboard">Dashboard</a>
-        <a href="#paper">Paper Trading</a>
-    </div>
+    <ul class="nav-menu">
+        <li><a href="#dashboard" class="nav-link active" data-section="dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li><a href="#scans" class="nav-link" data-section="scans"><i class="fas fa-radar"></i> Market Scans</a></li>
+        <li><a href="#analytics" class="nav-link" data-section="analytics"><i class="fas fa-chart-pie"></i> Analytics</a></li>
+        <li><a href="#trading" class="nav-link" data-section="trading"><i class="fas fa-exchange-alt"></i> Paper Trading</a></li>
+        <li><a href="#analyzer" class="nav-link" data-section="analyzer"><i class="fas fa-microscope"></i> Stock Analyzer</a></li>
+    </ul>
 
+    <div class="sidebar-footer">
+        <div class="status-indicator">
+            <span class="status-dot"></span>
+            System Online
+        </div>
+    </div>
 </nav>
 
+<!-- TOP BAR -->
+<div class="top-bar">
+    <div class="top-bar-left">
+        <span class="time-display" id="timeDisplay"></span>
+        <span class="market-status">NSE LIVE</span>
+    </div>
+    <div class="top-bar-right">
+        <button class="refresh-btn" onclick="autoRefresh()"><i class="fas fa-sync-alt"></i> Auto-Refresh</button>
+    </div>
+</div>
 
 <main>
 
 
-<!-- =====================================================
-     DASHBOARD
-===================================================== -->
-
-<section id="dashboard">
-
-    <div class="page-header">
-
-        <div>
-            <h1>Indian Swing Market</h1>
-
-            <p>
-                AI-powered analysis of the Top 50 swing universe
-            </p>
+    <!-- DASHBOARD SECTION -->
+    <section id="dashboard-section" class="content-section active">
+        <div class="header-container">
+            <h1>Market Dashboard</h1>
+            <p>Real-time analysis of top trading opportunities</p>
         </div>
 
-        <button
-            class="primary"
-            onclick="loadTop5()">
+        <!-- KEY METRICS -->
+        <div class="metrics-grid">
+            <div class="metric-card gradient-1">
+                <div class="metric-icon"><i class="fas fa-arrow-up"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">BUY Signals</span>
+                    <strong id="buyCount" class="metric-value">-</strong>
+                </div>
+            </div>
 
-            🔄 Analyze Top 5
+            <div class="metric-card gradient-2">
+                <div class="metric-icon"><i class="fas fa-arrow-down"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">SELL Signals</span>
+                    <strong id="sellCount" class="metric-value">-</strong>
+                </div>
+            </div>
 
-        </button>
+            <div class="metric-card gradient-3">
+                <div class="metric-icon"><i class="fas fa-sync"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Last Update</span>
+                    <strong id="lastScan" class="metric-value">-</strong>
+                </div>
+            </div>
 
-    </div>
-
-
-    <!-- MARKET SUMMARY -->
-
-    <div class="summary-grid">
-
-        <div class="summary-card">
-
-            <span>BUY Opportunities</span>
-
-            <strong id="buyCount">
-                -
-            </strong>
-
+            <div class="metric-card gradient-4">
+                <div class="metric-icon"><i class="fas fa-database"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Universe</span>
+                    <strong id="universeCount" class="metric-value">50</strong>
+                </div>
+            </div>
         </div>
 
+        <!-- TOP 5 SECTION -->
+        <div class="section-container">
+            <div class="section-header">
+                <h2><i class="fas fa-crown"></i> Top 5 Opportunities</h2>
+                <button class="btn-refresh" onclick="loadTop5()"><i class="fas fa-redo"></i> Refresh</button>
+            </div>
+            <div id="top5" class="stocks-container">
+                <div class="loading-spinner"><i class="fas fa-spinner"></i> Analyzing...</div>
+            </div>
+        </div>
+    </section>
 
-        <div class="summary-card">
-
-            <span>SELL Opportunities</span>
-
-            <strong id="sellCount">
-                -
-            </strong>
-
+    <!-- MARKET SCANS SECTION -->
+    <section id="scans-section" class="content-section">
+        <div class="header-container">
+            <h1>Market Scans</h1>
+            <p>Advanced screening patterns and technical signals</p>
         </div>
 
+        <div class="scans-grid">
+            <div class="scan-card">
+                <div class="scan-header">
+                    <h3><i class="fas fa-rocket"></i> Breakout Scan</h3>
+                    <button class="btn-scan" onclick="loadBreakoutScan()"><i class="fas fa-play"></i> Run</button>
+                </div>
+                <p>Stocks breaking key resistance levels</p>
+                <div id="breakout-results" class="scan-results">-</div>
+            </div>
 
-        <div class="summary-card">
+            <div class="scan-card">
+                <div class="scan-header">
+                    <h3><i class="fas fa-bolt"></i> Momentum Scan</h3>
+                    <button class="btn-scan" onclick="loadMomentumScan()"><i class="fas fa-play"></i> Run</button>
+                </div>
+                <p>High momentum stocks with strong trend</p>
+                <div id="momentum-results" class="scan-results">-</div>
+            </div>
 
-            <span>Market Scan</span>
+            <div class="scan-card">
+                <div class="scan-header">
+                    <h3><i class="fas fa-wave-square"></i> RSI Scan</h3>
+                    <button class="btn-scan" onclick="loadRsiScan()"><i class="fas fa-play"></i> Run</button>
+                </div>
+                <p>Oversold/Overbought RSI conditions</p>
+                <div id="rsi-results" class="scan-results">-</div>
+            </div>
+        </div>
+    </section>
 
-            <strong>
-                Top 50
-            </strong>
-
+    <!-- ANALYTICS SECTION -->
+    <section id="analytics-section" class="content-section">
+        <div class="header-container">
+            <h1>Trading Analytics</h1>
+            <p>Portfolio performance and market insights</p>
         </div>
 
+        <div class="analytics-grid">
+            <div class="analytics-card">
+                <h3><i class="fas fa-chart-line"></i> Portfolio Overview</h3>
+                <button class="btn-load" onclick="loadAnalytics()"><i class="fas fa-sync"></i> Load Analytics</button>
+                <div id="analytics-content" class="analytics-content">-</div>
+            </div>
+        </div>
+    </section>
 
-        <div class="summary-card">
-
-            <span>Last Scan</span>
-
-            <strong id="lastScan">
-                -
-            </strong>
-
+    <!-- STOCK ANALYZER SECTION -->
+    <section id="analyzer-section" class="content-section">
+        <div class="header-container">
+            <h1>Stock Analyzer</h1>
+            <p>Comprehensive analysis for individual stocks</p>
         </div>
 
-    </div>
+        <div class="analyzer-container">
+            <div class="search-bar">
+                <input id="analyzeSymbol" type="text" placeholder="Enter stock symbol (e.g., TCS)" value="TCS">
+                <button class="btn-analyze" onclick="analyzeStock()"><i class="fas fa-search"></i> Analyze</button>
+            </div>
+            <div id="analyzer-results" class="analyzer-results">
+                <p>Enter a stock symbol to analyze</p>
+            </div>
+        </div>
+    </section>
 
-
-
-    <!-- TOP 5 -->
-
-    <div class="section-title">
-
-        <h2>
-            🏆 Top 5 Opportunities
-        </h2>
-
-        <span>
-            BUY + SELL
-        </span>
-
-    </div>
-
-
-    <div
-        id="top5"
-        class="stock-grid">
-
-        <div class="loading">
-            Loading analysis...
+    <!-- PAPER TRADING SECTION -->
+    <section id="trading-section" class="content-section">
+        <div class="header-container">
+            <h1>Paper Trading</h1>
+            <p>Practice trading with virtual capital</p>
         </div>
 
-    </div>
-
-
-
-    <!-- ANALYZE STOCK -->
-
-    <div class="card">
-
-        <h2>
-            🔍 Analyze Specific Stock
-        </h2>
-
-        <div class="search-box">
-
-            <input
-                id="symbol"
-                value="TCS"
-                placeholder="Enter NSE stock">
-
-            <button
-                class="primary"
-                onclick="analyzeStock()">
-
-                Analyze
-
-            </button>
-
+        <!-- PORTFOLIO STATS -->
+        <div class="portfolio-stats">
+            <div class="stat-box">
+                <span class="stat-label">Available Cash</span>
+                <strong id="cash" class="stat-value">₹100,000</strong>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Open Positions</span>
+                <strong id="positionCount" class="stat-value">0</strong>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Total Trades</span>
+                <strong id="tradeCount" class="stat-value">0</strong>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Total P&L</span>
+                <strong id="totalPnl" class="stat-value">₹0</strong>
+            </div>
         </div>
 
-
-        <div
-            id="analysis"
-            class="analysis-box">
-
-            Enter a stock and click Analyze.
-
+        <!-- TRADE EXECUTOR -->
+        <div class="trade-executor">
+            <h3>Execute Trade</h3>
+            <div class="trade-inputs">
+                <input id="tradeSymbol" type="text" placeholder="Symbol" value="TCS">
+                <input id="tradePrice" type="number" placeholder="Price" step="0.01">
+                <input id="tradeQty" type="number" placeholder="Quantity" value="1" min="1">
+                <button class="btn-buy" onclick="executeTrade('buy')"><i class="fas fa-plus"></i> BUY</button>
+                <button class="btn-sell" onclick="executeTrade('sell')"><i class="fas fa-minus"></i> SELL</button>
+            </div>
+            <div id="tradeResult" class="trade-result"></div>
         </div>
 
-    </div>
-
-</section>
-
-
-
-<!-- =====================================================
-     PAPER TRADING
-===================================================== -->
-
-<section id="paper">
-
-    <div class="page-header">
-
-        <div>
-
-            <h1>
-                📊 Paper Trading
-            </h1>
-
-            <p>
-                Practice trades without using real money.
-            </p>
-
+        <!-- POSITIONS -->
+        <div class="positions-section">
+            <h3><i class="fas fa-briefcase"></i> Open Positions</h3>
+            <button class="btn-refresh-small" onclick="refreshPortfolio()"><i class="fas fa-sync"></i> Refresh</button>
+            <div id="positions" class="positions-list">No open positions</div>
         </div>
 
-        <button
-            class="primary"
-            onclick="refreshPortfolio()">
-
-            🔄 Refresh
-
-        </button>
-
-    </div>
-
-
-
-    <!-- ACCOUNT -->
-
-    <div class="summary-grid">
-
-        <div class="summary-card">
-
-            <span>
-                Available Cash
-            </span>
-
-            <strong id="cash">
-                ₹100,000
-            </strong>
-
+        <!-- TRADE HISTORY -->
+        <div class="history-section">
+            <h3><i class="fas fa-history"></i> Trade History</h3>
+            <div id="tradeHistory" class="trade-history">No trades yet</div>
         </div>
+    </section>
 
-
-        <div class="summary-card">
-
-            <span>
-                Open Positions
-            </span>
-
-            <strong id="positionCount">
-                0
-            </strong>
-
-        </div>
-
-
-        <div class="summary-card">
-
-            <span>
-                Total Trades
-            </span>
-
-            <strong id="tradeCount">
-                0
-            </strong>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- TRADE FORM -->
-
-    <div class="card">
-
-        <h2>
-            Execute Paper Trade
-        </h2>
-
-
-        <div class="trade-form">
-
-            <input
-                id="tradeSymbol"
-                placeholder="Symbol"
-                value="TCS">
-
-
-            <input
-                id="tradePrice"
-                type="number"
-                placeholder="Price">
-
-
-            <input
-                id="tradeQty"
-                type="number"
-                placeholder="Quantity">
-
-
-            <button
-                class="buy-button"
-                onclick="executeTrade('buy')">
-
-                BUY
-
-            </button>
-
-
-            <button
-                class="sell-button"
-                onclick="executeTrade('sell')">
-
-                SELL
-
-            </button>
-
-        </div>
-
-
-        <div
-            id="tradeResult"
-            class="message">
-
-        </div>
-
-    </div>
-
-
-
-    <!-- POSITIONS -->
-
-    <div class="card">
-
-        <h2>
-            Open Positions
-        </h2>
-
-
-        <div
-            id="positions">
-
-            No open positions.
-
-        </div>
-
-    </div>
-
-
-
-    <!-- TRADE HISTORY -->
-
-    <div class="card">
-
-        <h2>
-            Trade History
-        </h2>
-
-
-        <div
-            id="tradeHistory">
-
-            No trades yet.
-
-        </div>
-
-    </div>
-
-</section>
+</main>
 
 </main>
 

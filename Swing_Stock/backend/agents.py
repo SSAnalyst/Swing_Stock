@@ -36,6 +36,12 @@ OPENROUTER_MODEL = os.getenv(
     "openai/gpt-4o-mini"
 )
 
+FALLBACK_OPENROUTER_MODELS = [
+    OPENROUTER_MODEL,
+    "openai/gpt-4o-mini",
+    "meta-llama/llama-3.1-8b-instruct:free",
+]
+
 
 # =========================================================
 # TOP 50 INDIAN SWING STOCKS
@@ -1195,29 +1201,16 @@ class AIAnalyst:
     def run(self, analysis):
 
         if not self.api_key:
-
             return {
-
-                "summary":
-                    "OpenRouter API key not configured.",
-
-                "available":
-                    False
-
+                "summary": "OpenRouter API key not configured.",
+                "available": False,
             }
 
-
-        symbol = analysis.get(
-            "symbol",
-            ""
-        )
-
-
+        symbol = analysis.get("symbol", "")
         prompt = f"""
 You are an Indian stock swing-trading analyst.
 
-Analyze this stock using ONLY the supplied
-technical, pattern, risk and news information.
+Analyze this stock using ONLY the supplied technical, pattern, risk and news information.
 
 Stock:
 {symbol}
@@ -1226,28 +1219,16 @@ Current Price:
 {analysis.get("price")}
 
 Technical:
-{json.dumps(
-    analysis.get("technical", {}),
-    default=str
-)}
+{json.dumps(analysis.get("technical", {}), default=str)}
 
 Pattern:
-{json.dumps(
-    analysis.get("pattern", {}),
-    default=str
-)}
+{json.dumps(analysis.get("pattern", {}), default=str)}
 
 Risk:
-{json.dumps(
-    analysis.get("risk", {}),
-    default=str
-)}
+{json.dumps(analysis.get("risk", {}), default=str)}
 
 News:
-{json.dumps(
-    analysis.get("news", {}),
-    default=str
-)}
+{json.dumps(analysis.get("news", {}), default=str)}
 
 Bullish Score:
 {analysis.get("bullish_score")}
@@ -1269,196 +1250,82 @@ Return concise JSON with:
 Do not invent financial data.
 """
 
-
         headers = {
-
-            "Authorization":
-                f"Bearer {self.api_key}",
-
-            "Content-Type":
-                "application/json",
-
-            "HTTP-Referer":
-                "http://localhost:8000",
-
-            "X-Title":
-                "Indian Stock Analytics AI"
-
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "http://localhost:8000",
+            "X-Title": "Indian Stock Analytics AI",
         }
 
+        fallback_models = []
+        seen = set()
+        for model_name in FALLBACK_OPENROUTER_MODELS:
+            if model_name and model_name not in seen:
+                fallback_models.append(model_name)
+                seen.add(model_name)
 
-        payload = {
+        last_error = None
 
-            "model":
-                self.model,
-
-            "messages": [
-
-                {
-
-                    "role":
-                        "system",
-
-                    "content":
-                        "You are a disciplined stock analyst."
-
-                },
-
-                {
-
-                    "role":
-                        "user",
-
-                    "content":
-                        prompt
-
-                }
-
-            ],
-
-            "temperature":
-                0.1,
-
-            "max_tokens":
-                500
-
-        }
-
-
-        try:
-
-            response = requests.post(
-
-                "https://openrouter.ai/api/v1/chat/completions",
-
-                headers=headers,
-
-                json=payload,
-
-                timeout=30
-
-            )
-
-
-            # -------------------------------------------------
-            # RATE LIMIT
-            # -------------------------------------------------
-
-            if response.status_code == 429:
-
-                print(
-                    "OpenRouter rate limit "
-                    "reached. Continuing "
-                    "without AI."
-                )
-
-
-                return {
-
-                    "summary":
-                        "AI temporarily unavailable "
-                        "because OpenRouter rate limit "
-                        "was reached.",
-
-                    "available":
-                        False,
-
-                    "rate_limited":
-                        True
-
-                }
-
-
-            response.raise_for_status()
-
-
-            data = response.json()
-
-
-            content = (
-                data
-                .get("choices", [{}])[0]
-                .get("message", {})
-                .get("content", "")
-            )
-
-
-            if not content:
-
-                return {
-
-                    "summary":
-                        "AI returned no analysis.",
-
-                    "available":
-                        False
-
-                }
-
-
-            # -------------------------------------------------
-            # TRY JSON
-            # -------------------------------------------------
+        for model_name in fallback_models:
+            payload = {
+                "model": model_name,
+                "messages": [
+                    {"role": "system", "content": "You are a disciplined stock analyst."},
+                    {"role": "user", "content": prompt},
+                ],
+                "temperature": 0.1,
+                "max_tokens": 500,
+            }
 
             try:
-
-                cleaned = (
-                    content
-                    .replace(
-                        "```json",
-                        ""
-                    )
-                    .replace(
-                        "```",
-                        ""
-                    )
-                    .strip()
+                response = requests.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=headers,
+                    json=payload,
+                    timeout=30,
                 )
 
+                if response.status_code == 429:
+                    print("OpenRouter rate limit reached. Continuing without AI.")
+                    return {
+                        "summary": "AI temporarily unavailable because OpenRouter rate limit was reached.",
+                        "available": False,
+                        "rate_limited": True,
+                    }
 
-                parsed = json.loads(
-                    cleaned
+                if response.status_code in (400, 401, 403, 404):
+                    last_error = f"{response.status_code} {response.text[:180]}"
+                    print(f"OpenRouter model {model_name} failed: {last_error}")
+                    continue
+
+                response.raise_for_status()
+                data = response.json()
+
+                content = (
+                    data.get("choices", [{}])[0].get("message", {}).get("content", "")
                 )
 
+                if not content:
+                    return {"summary": "AI returned no analysis.", "available": False}
 
-                return clean_for_json(
-                    parsed
-                )
+                try:
+                    cleaned = content.replace("```json", "").replace("```", "").strip()
+                    parsed = json.loads(cleaned)
+                    return clean_for_json(parsed)
+                except Exception:
+                    return {"summary": content, "available": True}
 
+            except Exception as e:
+                last_error = str(e)
+                print(f"OpenRouter failed for {symbol} with {model_name}: {e}")
+                continue
 
-            except Exception:
-
-                return {
-
-                    "summary":
-                        content,
-
-                    "available":
-                        True
-
-                }
-
-
-        except Exception as e:
-
-            print(
-                f"OpenRouter failed "
-                f"for {symbol}: {e}"
-            )
-
-
-            return {
-
-                "summary":
-                    "AI analyst unavailable.",
-
-                "error":
-                    str(e),
-
-                "available":
-                    False
-
-            }
+        print(f"All OpenRouter models failed for {symbol}: {last_error}")
+        return {
+            "summary": "AI analyst unavailable.",
+            "error": last_error or "Unknown OpenRouter error",
+            "available": False,
+        }
 
 
 # =========================================================
@@ -1813,7 +1680,7 @@ class Orchestrator:
     # TOP 5
     # =====================================================
 
-    def top5(self):
+    def top5(self, skip_ai=False):
 
         results = []
 
@@ -1823,7 +1690,7 @@ class Orchestrator:
         )
 
         print(
-            "STARTING TOP 50 ANALYSIS"
+            f"STARTING TOP 50 ANALYSIS (skip_ai={skip_ai})"
         )
 
         print(
@@ -1953,53 +1820,57 @@ class Orchestrator:
 
 
         # -------------------------------------------------
-        # AI ANALYSIS ONLY FOR TOP 5
+        # AI ANALYSIS ONLY FOR TOP 5 (unless skipped)
         # -------------------------------------------------
 
-        print(
-            "\n================================"
-        )
+        if not skip_ai:
+            print(
+                "\n================================"
+            )
 
-        print(
-            "TOP 5 AI ANALYSIS"
-        )
+            print(
+                "TOP 5 AI ANALYSIS"
+            )
 
-        print(
-            "================================"
-        )
-
-
-        for result in top:
-
-            try:
-
-                print(
-                    f"AI analyzing "
-                    f"{result['symbol']}"
-                )
+            print(
+                "================================"
+            )
 
 
-                result["ai"] = (
-                    self.ai.run(
-                        result
+            for result in top:
+
+                try:
+
+                    print(
+                        f"AI analyzing "
+                        f"{result['symbol']}"
                     )
-                )
 
 
-            except Exception as e:
+                    result["ai"] = (
+                        self.ai.run(
+                            result
+                        )
+                    )
 
-                result["ai"] = {
 
-                    "summary":
-                        "AI unavailable",
+                except Exception as e:
 
-                    "available":
-                        False,
+                    result["ai"] = {
 
-                    "error":
-                        str(e)
+                        "summary":
+                            "AI unavailable",
 
-                }
+                        "available":
+                            False,
+
+                        "error":
+                            str(e)
+
+                    }
+        else:
+            for result in top:
+                result["ai"] = {"available": False, "summary": "AI skipped for faster load"}
 
 
         # -------------------------------------------------
