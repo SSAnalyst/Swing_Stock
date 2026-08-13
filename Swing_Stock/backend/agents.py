@@ -5,7 +5,7 @@ import time
 import requests
 import pandas as pd
 import numpy as np
-
+from .trade_plan import TradePlanAgent
 from datetime import datetime
 from urllib.parse import quote_plus
 from xml.etree import ElementTree as ET
@@ -867,6 +867,87 @@ class RiskAgent:
 
         })
 
+################################################
+class VolumeAgent:
+
+    def analyze(self, df):
+
+        if df is None or df.empty:
+            return {
+                "direction": "NEUTRAL",
+                "bullish_score": 0,
+                "bearish_score": 0
+            }
+
+        if "Volume" not in df.columns:
+            return {
+                "direction": "NEUTRAL",
+                "bullish_score": 0,
+                "bearish_score": 0
+            }
+
+        volume = pd.to_numeric(
+            df["Volume"],
+            errors="coerce"
+        ).dropna()
+
+        close = pd.to_numeric(
+            df["Close"],
+            errors="coerce"
+        ).dropna()
+
+        if len(volume) < 20:
+            return {
+                "direction": "NEUTRAL",
+                "bullish_score": 0,
+                "bearish_score": 0
+            }
+
+        current_volume = float(volume.iloc[-1])
+        avg_volume = float(volume.tail(20).mean())
+
+        current_price = float(close.iloc[-1])
+        previous_price = float(close.iloc[-2])
+
+        bullish = 0
+        bearish = 0
+
+        volume_ratio = (
+            current_volume / avg_volume
+            if avg_volume > 0 else 0
+        )
+
+        if volume_ratio > 2:
+            bullish += 2
+
+        if (
+            current_price > previous_price
+            and volume_ratio > 1.5
+        ):
+            bullish += 2
+
+        if (
+            current_price < previous_price
+            and volume_ratio > 1.5
+        ):
+            bearish += 2
+
+        direction = "NEUTRAL"
+
+        if bullish > bearish:
+            direction = "BULLISH"
+
+        if bearish > bullish:
+            direction = "BEARISH"
+
+        return {
+            "direction": direction,
+            "bullish_score": bullish,
+            "bearish_score": bearish,
+            "volume_ratio": round(volume_ratio, 2),
+            "current_volume": int(current_volume),
+            "avg_20d_volume": int(avg_volume)
+        }
 
 # =========================================================
 # NEWS AGENT
@@ -926,7 +1007,7 @@ class NewsAgent:
 
             for item in root.findall(
                 ".//item"
-            )[:10]:
+            )[:3]:
 
                 title_node = (
                     item.find("title")
@@ -1089,7 +1170,7 @@ class NewsAgent:
                 bearish,
 
             "headlines":
-                headlines
+                headlines[:3]
 
         }
 
@@ -1412,6 +1493,14 @@ class Orchestrator:
             AIAnalyst()
         )
 
+        self.volume = (
+            VolumeAgent()
+        )
+
+        self.trade_plan = (
+        TradePlanAgent()
+        )
+
 
     # =====================================================
     # GET VALID DATA
@@ -1533,85 +1622,79 @@ class Orchestrator:
         # RUN AGENTS
         # -------------------------------------------------
 
-        technical = (
-            self.technical
-            .analyze(df)
+        technical = self.technical.analyze(df)
+
+        pattern = self.pattern.analyze(df)
+
+        risk = self.risk.analyze(df)
+
+        trade_plan = (
+            self.trade_plan
+            .generate(
+                price,
+                risk
+            )
         )
 
+        volume = self.volume.analyze(df)
 
-        pattern = (
-            self.pattern
-            .analyze(df)
-        )
-
-
-        risk = (
-            self.risk
-            .analyze(df)
-        )
-
-
-        news = (
-            self.news
-            .analyze(symbol)
-        )
+        news = self.news.analyze(symbol)
 
 
         # -------------------------------------------------
         # SCORES
         # -------------------------------------------------
 
-        bullish = (
-
-            safe_float(
-                technical.get(
-                    "bullish_score"
-                )
-            )
-
-            +
-
-            safe_float(
-                pattern.get(
-                    "bullish_score"
-                )
-            )
-
-            +
-
-            safe_float(
-                news.get(
-                    "bullish_score"
-                )
-            )
-
+        technical_bull = safe_float(
+            technical.get("bullish_score", 0)
         )
 
+        technical_bear = safe_float(
+            technical.get("bearish_score", 0)
+        )
+
+        pattern_bull = safe_float(
+            pattern.get("bullish_score", 0)
+        )
+
+        pattern_bear = safe_float(
+            pattern.get("bearish_score", 0)
+        )
+
+        volume_bull = safe_float(
+            volume.get("bullish_score", 0)
+        )
+
+        volume_bear = safe_float(
+            volume.get("bearish_score", 0)
+        )
+
+        news_bull = safe_float(
+            news.get("bullish_score", 0)
+        )
+
+        news_bear = safe_float(
+            news.get("bearish_score", 0)
+        )
+
+        bullish = (
+            (technical_bull * 0.50)
+            +
+            (pattern_bull * 0.20)
+            +
+            (volume_bull * 0.20)
+            +
+            (news_bull * 0.10)
+        )
 
         bearish = (
-
-            safe_float(
-                technical.get(
-                    "bearish_score"
-                )
-            )
-
+            (technical_bear * 0.50)
             +
-
-            safe_float(
-                pattern.get(
-                    "bearish_score"
-                )
-            )
-
+            (pattern_bear * 0.20)
             +
-
-            safe_float(
-                news.get(
-                    "bearish_score"
-                )
-            )
-
+            (volume_bear * 0.20)
+            +
+            (news_bear * 0.10)
         )
 
 
@@ -1619,40 +1702,48 @@ class Orchestrator:
         # DECISION
         # -------------------------------------------------
 
-        difference = (
-            bullish -
-            bearish
-        )
+        difference = bullish - bearish
 
+        if difference >= 4:
+            decision = "STRONG_BUY"
 
-        if difference >= 3:
-
+        elif difference >= 2:
             decision = "BUY"
 
-
-        elif difference <= -3:
-
-            decision = "SELL"
-
-
-        elif difference >= 1:
-
+        elif difference >= 0.5:
             decision = "WATCH_BUY"
 
+        elif difference <= -4:
+            decision = "STRONG_SELL"
 
-        elif difference <= -1:
+        elif difference <= -2:
+            decision = "SELL"
 
+        elif difference <= -0.5:
             decision = "WATCH_SELL"
 
-
         else:
-
             decision = "HOLD"
 
 
         # -------------------------------------------------
         # RESULT BEFORE AI
         # -------------------------------------------------
+
+        total_signal = bullish + bearish
+
+        if total_signal > 0:
+
+            confidence = (
+                max(
+                    bullish,
+                    bearish
+                ) / total_signal
+            ) * 100
+
+        else:
+
+            confidence = 50
 
         result = {
 
@@ -1667,6 +1758,12 @@ class Orchestrator:
 
             "decision":
                 decision,
+
+            "confidence":
+                round(
+                    confidence,
+                    2
+                ),
 
             "bullish_score":
                 round(
@@ -1688,6 +1785,12 @@ class Orchestrator:
 
             "risk":
                 risk,
+
+            "trade_plan":
+                trade_plan,
+
+            "volume": 
+                volume,
 
             "news":
                 news,

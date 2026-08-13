@@ -3,6 +3,7 @@ from datetime import datetime
 import math
 
 from .data import MarketData
+from .database import Database
 
 
 @dataclass
@@ -21,22 +22,26 @@ class PaperBroker:
 
     def __init__(self):
 
-        self.cash = 100000.0
-
-        self.positions = {}
-
-        self.trades = []
-
-        self.next_id = 1
-
         self.market = MarketData()
+        self.db = Database()
 
+    # =====================================================
+    # DATABASE
+    # =====================================================
+
+    def conn(self):
+
+        return self.db.get_connection()
 
     # =====================================================
     # SAFE NUMBER
     # =====================================================
 
-    def safe_number(self, value, default=0.0):
+    def safe_number(
+        self,
+        value,
+        default=0.0
+    ):
 
         try:
 
@@ -51,12 +56,150 @@ class PaperBroker:
 
             return default
 
+    # =====================================================
+    # CASH
+    # =====================================================
+
+    def get_cash(self):
+
+        conn = self.conn()
+
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            SELECT cash
+            FROM portfolio
+            WHERE id = 1
+            """
+        )
+
+        row = cur.fetchone()
+
+        conn.close()
+
+        if row:
+
+            return float(row[0])
+
+        return 100000.0
+
+    def update_cash(
+        self,
+        cash
+    ):
+
+        conn = self.conn()
+
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            UPDATE portfolio
+            SET cash = ?
+            WHERE id = 1
+            """,
+            (cash,)
+        )
+
+        conn.commit()
+        conn.close()
 
     # =====================================================
-    # GET CURRENT MARKET PRICE
+    # POSITIONS
     # =====================================================
 
-    def get_current_price(self, symbol):
+    def get_positions(self):
+
+        conn = self.conn()
+
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            SELECT
+                symbol,
+                quantity,
+                avg_price
+            FROM positions
+            """
+        )
+
+        rows = cur.fetchall()
+
+        conn.close()
+
+        positions = {}
+
+        for row in rows:
+
+            positions[row[0]] = {
+
+                "quantity": int(row[1]),
+
+                "avg_price": float(row[2])
+
+            }
+
+        return positions
+
+    # =====================================================
+    # TRADES
+    # =====================================================
+
+    def get_trades(self):
+
+        conn = self.conn()
+
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            SELECT
+                id,
+                symbol,
+                side,
+                quantity,
+                price,
+                timestamp,
+                pnl
+            FROM trades
+            ORDER BY id
+            """
+        )
+
+        rows = cur.fetchall()
+
+        conn.close()
+
+        trades = []
+
+        for row in rows:
+
+            trades.append(
+
+                PaperTrade(
+                    id=row[0],
+                    symbol=row[1],
+                    side=row[2],
+                    quantity=row[3],
+                    price=row[4],
+                    timestamp=row[5],
+                    pnl=row[6]
+                )
+
+            )
+
+        return trades
+
+    # =====================================================
+    # MARKET PRICE
+    # =====================================================
+
+    def get_current_price(
+        self,
+        symbol
+    ):
 
         try:
 
@@ -65,43 +208,26 @@ class PaperBroker:
             )
 
             if df is None or df.empty:
-
                 return None
 
-
-            # Find latest valid Close value
-            closes = df["Close"].dropna()
-
-
-            if closes.empty:
-
-                return None
-
-
-            price = float(
-                closes.iloc[-1]
+            closes = (
+                df["Close"]
+                .dropna()
             )
 
-
-            if not math.isfinite(price):
-
+            if closes.empty:
                 return None
 
-
             return round(
-                price,
+                float(
+                    closes.iloc[-1]
+                ),
                 2
             )
 
-
-        except Exception as e:
-
-            print(
-                f"Price fetch failed for {symbol}: {e}"
-            )
+        except Exception:
 
             return None
-
 
     # =====================================================
     # BUY
@@ -116,148 +242,138 @@ class PaperBroker:
 
         symbol = symbol.upper()
 
-        price = self.safe_number(
-            price
-        )
+        price = float(price)
 
-        quantity = int(
-            quantity
-        )
-
-
-        if price <= 0:
-
-            return {
-                "error":
-                    "Invalid price"
-            }
-
-
-        if quantity <= 0:
-
-            return {
-                "error":
-                    "Invalid quantity"
-            }
-
+        quantity = int(quantity)
 
         cost = (
             price *
             quantity
         )
 
+        cash = self.get_cash()
 
-        if cost > self.cash:
+        if cost > cash:
 
             return {
                 "error":
                     "Insufficient cash"
             }
 
+        cash -= cost
 
-        self.cash -= cost
+        self.update_cash(cash)
 
+        positions = self.get_positions()
 
-        position = self.positions.setdefault(
-
+        position = positions.get(
             symbol,
-
             {
                 "quantity": 0,
                 "avg_price": 0.0
             }
-
         )
 
+        old_qty = position["quantity"]
 
-        old_quantity = position[
-            "quantity"
-        ]
-
-
-        old_avg_price = position[
+        old_price = position[
             "avg_price"
         ]
 
-
-        new_quantity = (
-            old_quantity +
+        new_qty = (
+            old_qty +
             quantity
         )
 
+        avg_price = (
 
-        # Weighted average entry price
+            (
+                old_qty *
+                old_price
+            )
 
-        if new_quantity > 0:
+            +
 
-            new_avg_price = (
+            (
+                quantity *
+                price
+            )
 
-                (
-                    old_avg_price *
-                    old_quantity
-                )
+        ) / new_qty
 
-                +
+        conn = self.conn()
 
-                (
-                    price *
-                    quantity
-                )
+        cur = conn.cursor()
 
-            ) / new_quantity
-
-        else:
-
-            new_avg_price = price
-
-
-        position[
-            "quantity"
-        ] = new_quantity
-
-
-        position[
-            "avg_price"
-        ] = round(
-            new_avg_price,
-            2
+        cur.execute(
+            """
+            INSERT OR REPLACE
+            INTO positions
+            (
+                symbol,
+                quantity,
+                avg_price
+            )
+            VALUES (
+                ?, ?, ?
+            )
+            """,
+            (
+                symbol,
+                new_qty,
+                avg_price
+            )
         )
 
+        timestamp = (
+            datetime.now()
+            .isoformat()
+        )
 
-        trade = PaperTrade(
-
-            id=self.next_id,
-
-            symbol=symbol,
-
-            side="BUY",
-
-            quantity=quantity,
-
-            price=round(
+        cur.execute(
+            """
+            INSERT INTO trades
+            (
+                symbol,
+                side,
+                quantity,
                 price,
-                2
-            ),
-
-            timestamp=datetime.now().isoformat(),
-
-            pnl=0.0
-
+                pnl,
+                timestamp
+            )
+            VALUES
+            (
+                ?, ?, ?, ?, ?, ?
+            )
+            """,
+            (
+                symbol,
+                "BUY",
+                quantity,
+                price,
+                0,
+                timestamp
+            )
         )
 
+        trade_id = cur.lastrowid
 
-        self.next_id += 1
-
-
-        self.trades.append(
-            trade
-        )
-
+        conn.commit()
+        conn.close()
 
         return asdict(
-            trade
-        )
 
+            PaperTrade(
+                id=trade_id,
+                symbol=symbol,
+                side="BUY",
+                quantity=quantity,
+                price=price,
+                timestamp=timestamp,
+                pnl=0
+            )
+
+        )
 
     # =====================================================
     # SELL
@@ -272,279 +388,194 @@ class PaperBroker:
 
         symbol = symbol.upper()
 
-        price = self.safe_number(
-            price
-        )
+        price = float(price)
 
-        quantity = int(
-            quantity
-        )
+        quantity = int(quantity)
 
+        positions = self.get_positions()
 
-        if price <= 0:
-
-            return {
-                "error":
-                    "Invalid price"
-            }
-
-
-        if quantity <= 0:
-
-            return {
-                "error":
-                    "Invalid quantity"
-            }
-
-
-        position = self.positions.get(
+        position = positions.get(
             symbol
         )
-
 
         if not position:
 
             return {
                 "error":
-                    f"No open position for {symbol}"
+                    f"No position in {symbol}"
             }
 
-
-        available_quantity = int(
-            position[
-                "quantity"
-            ]
-        )
-
-
-        if available_quantity < quantity:
+        if position["quantity"] < quantity:
 
             return {
                 "error":
-                    "Insufficient position quantity"
+                    "Not enough shares"
             }
 
+        avg_price = position[
+            "avg_price"
+        ]
 
-        avg_price = self.safe_number(
-
-            position[
-                "avg_price"
-            ]
-
-        )
-
-
-        # Realized P&L
-
-        realized_pnl = (
+        pnl = (
 
             price -
             avg_price
 
         ) * quantity
 
+        cash = self.get_cash()
 
-        realized_pnl = self.safe_number(
-            realized_pnl
+        cash += (
+            quantity *
+            price
         )
 
+        self.update_cash(cash)
 
-        # Add sale proceeds to cash
+        remaining = (
 
-        self.cash += (
+            position["quantity"]
 
-            price *
+            -
+
             quantity
 
         )
 
+        conn = self.conn()
 
-        # Reduce position
+        cur = conn.cursor()
 
-        position[
-            "quantity"
-        ] -= quantity
+        if remaining <= 0:
 
+            cur.execute(
+                """
+                DELETE FROM positions
+                WHERE symbol = ?
+                """,
+                (
+                    symbol,
+                )
+            )
 
-        # Remove position completely
+        else:
 
-        if position[
-            "quantity"
-        ] <= 0:
+            cur.execute(
+                """
+                UPDATE positions
+                SET quantity = ?
+                WHERE symbol = ?
+                """,
+                (
+                    remaining,
+                    symbol
+                )
+            )
 
-            del self.positions[
-                symbol
-            ]
+        timestamp = (
+            datetime.now()
+            .isoformat()
+        )
 
-
-        trade = PaperTrade(
-
-            id=self.next_id,
-
-            symbol=symbol,
-
-            side="SELL",
-
-            quantity=quantity,
-
-            price=round(
+        cur.execute(
+            """
+            INSERT INTO trades
+            (
+                symbol,
+                side,
+                quantity,
                 price,
-                2
-            ),
+                pnl,
+                timestamp
+            )
+            VALUES
+            (
+                ?, ?, ?, ?, ?, ?
+            )
+            """,
+            (
+                symbol,
+                "SELL",
+                quantity,
+                price,
+                pnl,
+                timestamp
+            )
+        )
 
-            timestamp=datetime.now().isoformat(),
+        trade_id = cur.lastrowid
 
-            pnl=round(
-                realized_pnl,
-                2
+        conn.commit()
+        conn.close()
+
+        return asdict(
+
+            PaperTrade(
+                id=trade_id,
+                symbol=symbol,
+                side="SELL",
+                quantity=quantity,
+                price=price,
+                timestamp=timestamp,
+                pnl=round(
+                    pnl,
+                    2
+                )
             )
 
         )
 
-
-        self.next_id += 1
-
-
-        self.trades.append(
-            trade
-        )
-
-
-        return asdict(
-            trade
-        )
-
-
     # =====================================================
-    # PORTFOLIO SUMMARY
+    # SUMMARY
     # =====================================================
 
     def summary(self):
 
-        positions = {}
+        positions = self.get_positions()
 
+        trades = self.get_trades()
 
-        total_invested = 0.0
+        cash = self.get_cash()
+
+        response_positions = {}
+
+        invested = 0.0
 
         current_value = 0.0
 
         unrealized_pnl = 0.0
 
+        for symbol, p in positions.items():
 
-        # -------------------------------------------------
-        # OPEN POSITIONS
-        # -------------------------------------------------
+            qty = p["quantity"]
 
-        for symbol, position in list(
-            self.positions.items()
-        ):
+            avg_price = p["avg_price"]
 
-            quantity = int(
-                position.get(
-                    "quantity",
-                    0
-                )
+            latest = self.get_current_price(
+                symbol
             )
 
+            if latest is None:
 
-            avg_price = self.safe_number(
+                latest = avg_price
 
-                position.get(
-                    "avg_price",
-                    0
-                )
+            inv = qty * avg_price
 
-            )
-
-
-            if quantity <= 0:
-
-                continue
-
-
-            # Get latest market price
-
-            latest_price = (
-                self.get_current_price(
-                    symbol
-                )
-            )
-
-
-            # If market data unavailable,
-            # use average buy price.
-
-            if (
-                latest_price is None
-                or not math.isfinite(
-                    latest_price
-                )
-            ):
-
-                latest_price = avg_price
-
-
-            # ---------------------------------------------
-            # INVESTED VALUE
-            # ---------------------------------------------
-
-            invested = (
-
-                avg_price *
-                quantity
-
-            )
-
-
-            invested = self.safe_number(
-                invested
-            )
-
-
-            # ---------------------------------------------
-            # CURRENT VALUE
-            # ---------------------------------------------
-
-            value = (
-
-                latest_price *
-                quantity
-
-            )
-
-
-            value = self.safe_number(
-                value
-            )
-
-
-            # ---------------------------------------------
-            # UNREALIZED P&L
-            # ---------------------------------------------
+            val = qty * latest
 
             pnl = (
-
-                latest_price -
+                latest -
                 avg_price
+            ) * qty
 
-            ) * quantity
-
-
-            pnl = self.safe_number(
-                pnl
-            )
-
-
-            # ---------------------------------------------
-            # P&L %
-            # ---------------------------------------------
+            pnl_pct = 0
 
             if avg_price > 0:
 
-                pnl_percent = (
+                pnl_pct = (
 
                     (
-                        latest_price -
+                        latest -
                         avg_price
                     )
 
@@ -554,35 +585,16 @@ class PaperBroker:
 
                 ) * 100
 
-            else:
-
-                pnl_percent = 0.0
-
-
-            pnl_percent = self.safe_number(
-                pnl_percent
-            )
-
-
-            # ---------------------------------------------
-            # ADD TO TOTALS
-            # ---------------------------------------------
-
-            total_invested += invested
-
-            current_value += value
-
+            invested += inv
+            current_value += val
             unrealized_pnl += pnl
 
-
-            # ---------------------------------------------
-            # POSITION RESPONSE
-            # ---------------------------------------------
-
-            positions[symbol] = {
+            response_positions[
+                symbol
+            ] = {
 
                 "quantity":
-                    quantity,
+                    qty,
 
                 "avg_price":
                     round(
@@ -592,19 +604,13 @@ class PaperBroker:
 
                 "current_price":
                     round(
-                        latest_price,
-                        2
-                    ),
-
-                "invested":
-                    round(
-                        invested,
+                        latest,
                         2
                     ),
 
                 "current_value":
                     round(
-                        value,
+                        val,
                         2
                     ),
 
@@ -616,91 +622,16 @@ class PaperBroker:
 
                 "pnl_percent":
                     round(
-                        pnl_percent,
+                        pnl_pct,
                         2
                     )
-
             }
 
-
-        # -------------------------------------------------
-        # REALIZED P&L
-        # -------------------------------------------------
-
-        realized_pnl = 0.0
-
-
-        for trade in self.trades:
-
-            if trade.side == "SELL":
-
-                realized_pnl += self.safe_number(
-                    trade.pnl
-                )
-
-
-        realized_pnl = self.safe_number(
-            realized_pnl
+        realized_pnl = sum(
+            t.pnl
+            for t in trades
+            if t.side == "SELL"
         )
-
-
-        # -------------------------------------------------
-        # TOTAL PORTFOLIO VALUE
-        # -------------------------------------------------
-
-        cash = self.safe_number(
-            self.cash
-        )
-
-
-        total_invested = self.safe_number(
-            total_invested
-        )
-
-
-        current_value = self.safe_number(
-            current_value
-        )
-
-
-        unrealized_pnl = self.safe_number(
-            unrealized_pnl
-        )
-
-
-        portfolio_value = (
-
-            cash +
-            current_value
-
-        )
-
-
-        portfolio_value = self.safe_number(
-            portfolio_value
-        )
-
-
-        # -------------------------------------------------
-        # TOTAL P&L
-        # -------------------------------------------------
-
-        total_pnl = (
-
-            realized_pnl +
-            unrealized_pnl
-
-        )
-
-
-        total_pnl = self.safe_number(
-            total_pnl
-        )
-
-
-        # -------------------------------------------------
-        # FINAL RESPONSE
-        # -------------------------------------------------
 
         return {
 
@@ -712,7 +643,7 @@ class PaperBroker:
 
             "invested":
                 round(
-                    total_invested,
+                    invested,
                     2
                 ),
 
@@ -724,7 +655,8 @@ class PaperBroker:
 
             "portfolio_value":
                 round(
-                    portfolio_value,
+                    cash +
+                    current_value,
                     2
                 ),
 
@@ -742,17 +674,17 @@ class PaperBroker:
 
             "total_pnl":
                 round(
-                    total_pnl,
+                    realized_pnl +
+                    unrealized_pnl,
                     2
                 ),
 
             "positions":
-                positions,
+                response_positions,
 
             "trades":
                 [
-                    asdict(trade)
-                    for trade in self.trades
+                    asdict(t)
+                    for t in trades
                 ]
-
         }
