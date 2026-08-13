@@ -1,4 +1,8 @@
 const API = "http://127.0.0.1:8000";
+const TOP5_CACHE_TTL = 5 * 60 * 1000;
+let top5Request = null;
+let top5Cache = null;
+let top5CacheTimestamp = 0;
 
 // Better fetch with error logging and timeout
 async function fetchAPI(endpoint, options = {}) {
@@ -84,6 +88,7 @@ function initNavigation() {
     navLinks.forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
+            const wasAlreadyActive = this.classList.contains('active');
             
             // Remove active from all links
             navLinks.forEach(l => l.classList.remove('active'));
@@ -101,7 +106,7 @@ function initNavigation() {
                 section.classList.add('active');
                 
                 // Load data for specific sections
-                if (this.dataset.section === 'dashboard') {
+                if (this.dataset.section === 'dashboard' && !wasAlreadyActive) {
                     loadTop5();
                 } else if (this.dataset.section === 'trading') {
                     refreshPortfolio();
@@ -126,9 +131,19 @@ function autoRefresh() {
    TOP 5 DASHBOARD
 ===================================================== */
 
-async function loadTop5() {
+async function loadTop5(force = false) {
     const container = document.getElementById("top5");
-    
+    const now = Date.now();
+
+    if (!force && top5Request) {
+        return top5Request;
+    }
+
+    if (!force && top5Cache && (now - top5CacheTimestamp) < TOP5_CACHE_TTL) {
+        renderTop5(top5Cache, container);
+        return top5Cache;
+    }
+
     container.innerHTML = `
         <div class="loading-spinner">
             <i class="fas fa-spinner"></i>
@@ -136,35 +151,16 @@ async function loadTop5() {
         </div>
     `;
 
-    try {
+    top5Request = (async () => {
         const data = await fetchAPI("/top5?skip_ai=true", { timeout: 45000 });
-        const results = data.results || [];
+        top5Cache = data.results || [];
+        top5CacheTimestamp = Date.now();
+        renderTop5(top5Cache, container);
+        return top5Cache;
+    })();
 
-        let buyCount = 0;
-        let sellCount = 0;
-
-        results.forEach(stock => {
-            if (stock.decision === "BUY" || stock.decision === "WATCH_BUY") {
-                buyCount++;
-            }
-            if (stock.decision === "SELL" || stock.decision === "WATCH_SELL") {
-                sellCount++;
-            }
-        });
-
-        document.getElementById("buyCount").textContent = buyCount;
-        document.getElementById("sellCount").textContent = sellCount;
-        document.getElementById("lastScan").textContent = new Date().toLocaleTimeString();
-
-        if (results.length === 0) {
-            container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-secondary);">No analysis results available.</div>`;
-            return;
-        }
-
-        container.innerHTML = results
-            .map((stock, index) => createStockCard(stock, index + 1))
-            .join("");
-
+    try {
+        await top5Request;
     } catch (error) {
         console.error(error);
         const errorMsg = error.name === 'AbortError' ? 'Request timeout - backend is busy' : error.message;
@@ -173,7 +169,37 @@ async function loadTop5() {
                 ❌ Error: ${errorMsg}
             </div>
         `;
+    } finally {
+        top5Request = null;
     }
+}
+
+function renderTop5(results, container) {
+    const items = Array.isArray(results) ? results : (results?.results || []);
+    let buyCount = 0;
+    let sellCount = 0;
+
+    items.forEach(stock => {
+        if (stock.decision === "BUY" || stock.decision === "WATCH_BUY") {
+            buyCount++;
+        }
+        if (stock.decision === "SELL" || stock.decision === "WATCH_SELL") {
+            sellCount++;
+        }
+    });
+
+    document.getElementById("buyCount").textContent = buyCount;
+    document.getElementById("sellCount").textContent = sellCount;
+    document.getElementById("lastScan").textContent = new Date().toLocaleTimeString();
+
+    if (items.length === 0) {
+        container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-secondary);">No analysis results available.</div>`;
+        return;
+    }
+
+    container.innerHTML = items
+        .map((stock, index) => createStockCard(stock, index + 1))
+        .join("");
 }
 
 function createStockCard(stock, rank) {
