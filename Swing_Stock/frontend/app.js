@@ -157,7 +157,7 @@ async function loadTop5(force = false) {
     `;
 
     top5Request = (async () => {
-        const data = await fetchAPI("/top5?skip_ai=true", { timeout: 45000 });
+        const data = await fetchAPI("/top5?skip_ai=true", { timeout: 120000 });
         top5Cache = data.results || [];
         top5CacheTimestamp = Date.now();
         renderTop5(top5Cache, container);
