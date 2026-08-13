@@ -88,7 +88,14 @@ function initNavigation() {
     navLinks.forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
-            const wasAlreadyActive = this.classList.contains('active');
+            const sectionId = this.dataset.section + '-section';
+            const targetSection = document.getElementById(sectionId);
+            const isTargetAlreadyVisible = targetSection && targetSection.classList.contains('active');
+            const hasFreshDashboardCache = this.dataset.section === 'dashboard' && top5Cache && (Date.now() - top5CacheTimestamp) < TOP5_CACHE_TTL;
+
+            if (this.dataset.section === 'dashboard' && (isTargetAlreadyVisible || hasFreshDashboardCache)) {
+                return;
+            }
             
             // Remove active from all links
             navLinks.forEach(l => l.classList.remove('active'));
@@ -100,13 +107,11 @@ function initNavigation() {
             });
             
             // Show selected section
-            const sectionId = this.dataset.section + '-section';
-            const section = document.getElementById(sectionId);
-            if (section) {
-                section.classList.add('active');
+            if (targetSection) {
+                targetSection.classList.add('active');
                 
                 // Load data for specific sections
-                if (this.dataset.section === 'dashboard' && !wasAlreadyActive) {
+                if (this.dataset.section === 'dashboard') {
                     loadTop5();
                 } else if (this.dataset.section === 'trading') {
                     refreshPortfolio();
@@ -120,9 +125,9 @@ function initNavigation() {
 
 function autoRefresh() {
     const activeSection = document.querySelector('.content-section.active');
-    if (activeSection.id.includes('dashboard')) {
-        loadTop5();
-    } else if (activeSection.id.includes('trading')) {
+    if (activeSection && activeSection.id.includes('dashboard')) {
+        loadTop5(true);
+    } else if (activeSection && activeSection.id.includes('trading')) {
         refreshPortfolio();
     }
 }
