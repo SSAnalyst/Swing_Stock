@@ -1662,14 +1662,19 @@ class Orchestrator:
             "news":
                 news,
 
-            "ai":
-                {},
-
             "generated_at":
                 datetime.now().isoformat()
 
         }
 
+        try:
+            result["ai"] = self.ai.run(result)
+        except Exception as e:
+            result["ai"] = {
+                "summary": "AI analyst unavailable.",
+                "available": False,
+                "error": str(e),
+            }
 
         return clean_for_json(
             result
