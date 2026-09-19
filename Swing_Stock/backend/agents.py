@@ -1469,7 +1469,7 @@ class Orchestrator:
     # ANALYZE ONE STOCK
     # =====================================================
 
-    def analyze(self, symbol):
+    def analyze(self, symbol, skip_ai=False):
 
         symbol = (
             symbol
@@ -1667,13 +1667,20 @@ class Orchestrator:
 
         }
 
-        try:
-            result["ai"] = self.ai.run(result)
-        except Exception as e:
+        if not skip_ai:
+            try:
+                result["ai"] = self.ai.run(result)
+            except Exception as e:
+                result["ai"] = {
+                    "summary": "AI analyst unavailable.",
+                    "available": False,
+                    "error": str(e),
+                }
+        else:
             result["ai"] = {
-                "summary": "AI analyst unavailable.",
+                "summary": "AI analysis skipped to conserve rate limit.",
                 "available": False,
-                "error": str(e),
+                "skipped": True,
             }
 
         return clean_for_json(
@@ -1979,3 +1986,4 @@ class StockAnalysisAgents:
     def top5(self):
 
         return self.orchestrator.top5()
+    

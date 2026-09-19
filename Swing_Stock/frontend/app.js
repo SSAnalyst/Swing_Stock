@@ -8,7 +8,7 @@ let top5CacheTimestamp = 0;
 async function fetchAPI(endpoint, options = {}) {
     try {
         const url = `${API}${endpoint}`;
-        const timeout = options.timeout || 60000; // 60 second default timeout
+        const timeout = options.timeout || 300000; // 300 second default timeout
         console.log(`[API] Fetching: ${url} (timeout: ${timeout}ms)`);
 
         const controller = new AbortController();
